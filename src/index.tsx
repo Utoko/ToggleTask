@@ -17,6 +17,8 @@ const TimeTracker = () => {
     Work: { elapsed: 0, startTime: null, startDate: null },
     Walking: { elapsed: 0, startTime: null, startDate: null },
     'Social Media': { elapsed: 0, startTime: null, startDate: null },
+    'programming Task': { elapsed: 0, startTime: null, startDate: null },
+    'eating': { elapsed: 0, startTime: null, startDate: null },
   });
   const [activeTask, setActiveTask] = useState<string | null>(null);
 
