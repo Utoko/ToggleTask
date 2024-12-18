@@ -21,6 +21,14 @@ const TimeTracker = () => {
     'eating': { elapsed: 0, startTime: null, startDate: null },
   });
   const [activeTask, setActiveTask] = useState<string | null>(null);
+  const [lastBingTime, setLastBingTime] = useState<number>(0);
+
+  const initialTime = new Date();
+  initialTime.setHours(21);
+  initialTime.setMinutes(23);
+  initialTime.setSeconds(0);
+  initialTime.setMilliseconds(0);
+  const initialTimestamp = initialTime.getTime();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,7 +37,7 @@ const TimeTracker = () => {
           const task = prev[activeTask];
           if (task.startTime) {
             const now = Date.now();
-            const newElapsed = task.elapsed + (now - task.startTime) / 1000;
+            const newElapsed = task.elapsed + (now - task.startTime) / (1000 * 60);
             return {
               ...prev,
               [activeTask]: { ...task, elapsed: newElapsed, startTime: now },
@@ -38,10 +46,16 @@ const TimeTracker = () => {
           return prev;
         });
       }
-    }, 100);
+
+      const now = Date.now();
+      if (now - lastBingTime >= 45 * 60 * 1000) {
+        new Audio('https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3').play();
+        setLastBingTime(now);
+      }
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTask]);
+  }, [activeTask, lastBingTime]);
 
   const handleTaskClick = (taskName: string) => {
     setTaskTimes((prev) => {
@@ -54,7 +68,7 @@ const TimeTracker = () => {
           const now = Date.now();
           newTimes[activeTask] = {
             ...currentTask,
-            elapsed: currentTask.elapsed + (now - currentTask.startTime) / 1000,
+            elapsed: currentTask.elapsed + (now - currentTask.startTime) / (1000 * 60),
             startTime: null,
           };
         }
@@ -141,7 +155,7 @@ const TimeTracker = () => {
                     : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                 }`}
             >
-              {taskName}: {time.elapsed.toFixed(1)}s
+              {taskName}: {time.elapsed.toFixed(1)}m
             </button>
           ))}
         </div>
