@@ -23,6 +23,13 @@ const TimeTracker = () => {
   const [newTaskName, setNewTaskName] = useState<string>('');
   const [activeTask, setActiveTask] = useState<string | null>(null);
   const [lastBingTime, setLastBingTime] = useState<number>(0);
+  const [editTaskName, setEditTaskName] = useState<string | null>(null);
+  const [editedTaskName, setEditedTaskName] = useState<string>('');
+    const [startDate, setStartDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
 
   const initialTime = new Date();
   initialTime.setHours(21);
@@ -92,31 +99,41 @@ const TimeTracker = () => {
   };
 
   const saveToLocalStorage = async () => {
+    setLoading(true);
+    setError(null);
     try {
       await saveDataToIndexedDB(taskTimes);
       alert('Data saved successfully!');
-    } catch (error) {
-      alert('Failed to save data to IndexedDB');
+    } catch (error: any) {
+        setError(`Failed to save data to IndexedDB: ${error.message}`);
+    } finally {
+        setLoading(false);
     }
   };
 
   const loadFromLocalStorage = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const loadedTaskTimes = await loadDataFromIndexedDB();
       setTaskTimes(loadedTaskTimes);
       setActiveTask(null);
       alert('Data loaded successfully!');
-    } catch (error) {
-        alert('Failed to load data from IndexedDB');
+    } catch (error: any) {
+        setError(`Failed to load data from IndexedDB: ${error.message}`);
+    } finally {
+        setLoading(false);
     }
   };
 
   const handleExportToCSV = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const csvData = await exportDataToCSV();
       if (!csvData) {
-        alert("No data to export");
-        return;
+          setError("No data to export");
+          return;
       }
       const blob = new Blob([csvData], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -127,15 +144,55 @@ const TimeTracker = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (error) {
-      alert('Failed to export data to CSV');
+    } catch (error: any) {
+        setError(`Failed to export data to CSV: ${error.message}`);
+    } finally {
+        setLoading(false);
     }
   };
 
-  const chartData = Object.entries(taskTimes).map(([taskName, time]) => ({
-    name: taskName,
-    elapsed: time.elapsed,
-  }));
+    const handleDeleteTask = (taskName: string) => {
+        setTaskTimes((prev) => {
+            const { [taskName]: deleted, ...rest } = prev;
+            return rest;
+        });
+    };
+
+    const handleEditTask = (taskName: string) => {
+        setEditTaskName(taskName);
+        setEditedTaskName(taskName);
+    };
+
+    const handleSaveEdit = (taskName: string) => {
+        setTaskTimes((prev) => {
+            const { [taskName]: task, ...rest } = prev;
+            return {
+                ...rest,
+                [editedTaskName]: task,
+            };
+        });
+        setEditTaskName(null);
+        setEditedTaskName('');
+    };
+
+    const handleStartDateChange = (e: any) => {
+        setStartDate(new Date(e.target.value));
+    };
+
+    const handleEndDateChange = (e: any) => {
+        setEndDate(new Date(e.target.value));
+    };
+
+  const chartData = Object.entries(taskTimes)
+        .filter(([taskName, time]) => {
+            if (!startDate || !endDate || !time.startDate) return true;
+            const taskStartDate = new Date(time.startDate);
+            return taskStartDate >= startDate && taskStartDate <= endDate;
+        })
+        .map(([taskName, time]) => ({
+            name: taskName,
+            elapsed: time.elapsed,
+        }));
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4">
@@ -167,21 +224,70 @@ const TimeTracker = () => {
             Add Task
           </button>
         </div>
+        
+        <div className="flex space-x-2 mb-4">
+            <input
+                type="date"
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                onChange={handleStartDateChange}
+            />
+            <input
+                type="date"
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                onChange={handleEndDateChange}
+            />
+        </div>
+
+        {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <span className="block sm:inline">{error}</span>
+            </div>
+        )}
 
         <div className="space-y-4">
           {Object.entries(taskTimes).map(([taskName, time]) => (
-            <button
-              key={taskName}
-              onClick={() => handleTaskClick(taskName)}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors
-                ${
-                  activeTask === taskName
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                }`}
-            >
-              {taskName}: {time.elapsed.toFixed(1)}m
-            </button>
+            <div key={taskName} className="flex items-center space-x-2">
+                {editTaskName === taskName ? (
+                    <div className="flex items-center space-x-2 flex-1">
+                        <input
+                            type="text"
+                            value={editedTaskName}
+                            onChange={(e) => setEditedTaskName(e.target.value)}
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                        />
+                        <button
+                            onClick={() => handleSaveEdit(taskName)}
+                            className="bg-green-500 text-white px-2 py-1 rounded-md hover:bg-green-600 transition-colors"
+                        >
+                            Save
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => handleTaskClick(taskName)}
+                        className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors
+                        ${
+                            activeTask === taskName
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                        }`}
+                    >
+                        {taskName}: {time.elapsed.toFixed(1)}m
+                    </button>
+                )}
+              <button
+                onClick={() => handleEditTask(taskName)}
+                className="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDeleteTask(taskName)}
+                className="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
           ))}
         </div>
 
@@ -202,20 +308,23 @@ const TimeTracker = () => {
           <button
             onClick={saveToLocalStorage}
             className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+            disabled={loading}
           >
-            Save
+            {loading ? 'Saving...' : 'Save'}
           </button>
           <button
             onClick={loadFromLocalStorage}
             className="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition-colors"
+            disabled={loading}
           >
-            Load
+            {loading ? 'Loading...' : 'Load'}
           </button>
           <button
             onClick={handleExportToCSV}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={loading}
           >
-            Export CSV
+            {loading ? 'Exporting...' : 'Export CSV'}
           </button>
         </div>
       </div>
