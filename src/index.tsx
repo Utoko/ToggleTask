@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { saveDataToIndexedDB, loadDataFromIndexedDB, exportDataToCSV } from './db';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface TaskTime {
   elapsed: number;
@@ -54,16 +54,10 @@ const TimeTracker = () => {
           return prev;
         });
       }
-
-      const now = Date.now();
-      if (now - lastBingTime >= 45 * 60 * 1000) {
-        new Audio('https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3').play();
-        setLastBingTime(now);
-      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTask, lastBingTime]);
+  }, [activeTask]);
 
   const handleTaskClick = (taskName: string) => {
     setTaskTimes((prev) => {
@@ -194,23 +188,29 @@ const TimeTracker = () => {
             elapsed: time.elapsed,
         }));
 
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
+
+    const playSound = () => {
+        new Audio('https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3').play();
+    };
+
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+    <div className="min-h-screen bg-gray-100 py-12 px-4 font-sans">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
           Time Tracker
         </h1>
         
-        <div className="flex space-x-2 mb-4">
+        <div className="flex space-x-4 mb-6">
           <input
             type="text"
             placeholder="New task name"
-            className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+            className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500"
             value={newTaskName}
             onChange={(e) => setNewTaskName(e.target.value)}
           />
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+            className="bg-blue-500 text-white px-5 py-2 rounded-md hover:bg-blue-600 transition-colors"
             onClick={() => {
               if (newTaskName.trim() !== '') {
                 setTaskTimes((prev) => ({
@@ -225,39 +225,41 @@ const TimeTracker = () => {
           </button>
         </div>
         
-        <div className="flex space-x-2 mb-4">
+        <div className="flex space-x-4 mb-6">
             <input
                 type="date"
-                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500"
                 onChange={handleStartDateChange}
             />
             <input
                 type="date"
-                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500"
                 onChange={handleEndDateChange}
             />
         </div>
 
         {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
                 <span className="block sm:inline">{error}</span>
             </div>
         )}
 
+        <button onClick={playSound} className="bg-purple-500 text-white px-5 py-2 rounded-md hover:bg-purple-600 transition-colors mb-4">Play Sound</button>
+
         <div className="space-y-4">
           {Object.entries(taskTimes).map(([taskName, time]) => (
-            <div key={taskName} className="flex items-center space-x-2">
+            <div key={taskName} className="flex items-center space-x-3">
                 {editTaskName === taskName ? (
-                    <div className="flex items-center space-x-2 flex-1">
+                    <div className="flex items-center space-x-3 flex-1">
                         <input
                             type="text"
                             value={editedTaskName}
                             onChange={(e) => setEditedTaskName(e.target.value)}
-                            className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500"
+                            className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500"
                         />
                         <button
                             onClick={() => handleSaveEdit(taskName)}
-                            className="bg-green-500 text-white px-2 py-1 rounded-md hover:bg-green-600 transition-colors"
+                            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-colors"
                         >
                             Save
                         </button>
@@ -265,7 +267,7 @@ const TimeTracker = () => {
                 ) : (
                     <button
                         onClick={() => handleTaskClick(taskName)}
-                        className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors
+                        className={`flex-1 py-3 px-5 rounded-lg font-medium transition-colors
                         ${
                             activeTask === taskName
                             ? 'bg-blue-600 text-white'
@@ -277,13 +279,13 @@ const TimeTracker = () => {
                 )}
               <button
                 onClick={() => handleEditTask(taskName)}
-                className="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 transition-colors"
+                className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition-colors"
               >
                 Edit
               </button>
               <button
                 onClick={() => handleDeleteTask(taskName)}
-                className="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors"
+                className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>
@@ -291,20 +293,32 @@ const TimeTracker = () => {
           ))}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-10">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="elapsed"
+                label
+              >
+                {
+                  chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))
+                }
+              </Pie>
               <Tooltip />
               <Legend />
-              <Bar dataKey="elapsed" fill="#8884d8" />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-8 flex space-x-4">
+        <div className="mt-10 flex space-x-4">
           <button
             onClick={saveToLocalStorage}
             className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
